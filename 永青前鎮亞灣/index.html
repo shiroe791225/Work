@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>永青前鎮亞灣｜每日工作待辦</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --card: #ffffff; --text: #1f2933; --muted: #6b7785;
+    --line: #dde3ea; --accent: #1f6feb; --accent-weak: #e7f0ff;
+    --high: #d64545; --mid: #d98a1c; --low: #3c8d5a; --done: #9aa5b1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12161b; --card: #1b2128; --text: #e6e9ed; --muted: #95a0ad;
+      --line: #2c343e; --accent: #58a6ff; --accent-weak: #1c2b40;
+      --high: #f07171; --mid: #f0b257; --low: #6cc28a; --done: #5c6773;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+  header { background: var(--card); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px; }
+  .top { display: flex; align-items: center; gap: 12px; padding: 12px 16px; flex-wrap: wrap; }
+  h1 { font-size: 18px; margin: 0; flex: 1; min-width: 180px; }
+  h1 small { display: block; font-size: 12px; color: var(--muted); font-weight: 400; }
+  .datebar { display: flex; gap: 6px; align-items: center; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { border: 1px solid var(--line); background: var(--card); padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.danger { color: var(--high); }
+  button.icon { padding: 6px 9px; }
+  input[type=date], input[type=text], input[type=search], select, textarea {
+    border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 6px 10px; }
+  textarea { width: 100%; resize: vertical; min-height: 60px; }
+  main { padding: 16px 0 60px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+  .add-row { display: grid; grid-template-columns: 1fr 110px auto; gap: 8px; }
+  @media (max-width: 560px) { .add-row { grid-template-columns: 1fr 1fr; } .add-row input[type=text] { grid-column: 1 / -1; } }
+  .stats { display: flex; gap: 14px; font-size: 13px; color: var(--muted); margin: 0 0 10px; flex-wrap: wrap; }
+  .stats b { color: var(--text); }
+  .progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-bottom: 12px; }
+  .progress > div { height: 100%; background: var(--low); width: 0; transition: width .3s; }
+  .filters { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .filters button.on { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); }
+  .todo { border: 1px solid var(--line); border-left: 4px solid var(--mid); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
+  .todo.p-high { border-left-color: var(--high); }
+  .todo.p-low { border-left-color: var(--low); }
+  .todo.done { opacity: .65; }
+  .todo.done .title { text-decoration: line-through; color: var(--done); }
+  .todo-head { display: flex; align-items: flex-start; gap: 10px; }
+  .todo-head input[type=checkbox] { width: 20px; height: 20px; margin-top: 2px; flex: none; accent-color: var(--low); }
+  .title { flex: 1; word-break: break-word; font-weight: 500; }
+  .meta { font-size: 12px; color: var(--muted); }
+  .tag { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 4px; border: 1px solid currentColor; margin-right: 4px; }
+  .tag.high { color: var(--high); } .tag.mid { color: var(--mid); } .tag.low { color: var(--low); }
+  .actions { display: flex; gap: 4px; flex: none; }
+  .note { margin: 8px 0 0 30px; white-space: pre-wrap; font-size: 14px; color: var(--muted); }
+  .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 10px 0 0 30px; }
+  @media (max-width: 560px) { .note, .photos { margin-left: 0; } }
+  .photo { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--bg); display: flex; flex-direction: column; }
+  .photo img { width: 100%; aspect-ratio: 4/3; object-fit: cover; cursor: zoom-in; display: block; }
+  .photo .cap { padding: 6px 8px; font-size: 13px; flex: 1; white-space: pre-wrap; word-break: break-word; }
+  .photo .cap.empty { color: var(--high); font-style: italic; }
+  .photo .pbtn { display: flex; border-top: 1px solid var(--line); }
+  .photo .pbtn button { flex: 1; border: 0; border-radius: 0; font-size: 12px; padding: 5px; background: transparent; }
+  .photo .pbtn button + button { border-left: 1px solid var(--line); }
+  .empty-state { text-align: center; color: var(--muted); padding: 30px 0; }
+  dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--text); width: min(560px, calc(100vw - 32px)); padding: 16px; }
+  dialog::backdrop { background: rgba(0,0,0,.55); }
+  dialog h3 { margin: 0 0 10px; font-size: 16px; }
+  dialog .row { margin-bottom: 10px; }
+  dialog label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  dialog .btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+  .preview { max-width: 100%; max-height: 50vh; display: block; margin: 0 auto 10px; border-radius: 8px; }
+  #viewer { width: min(1000px, calc(100vw - 32px)); }
+  #viewer img { max-width: 100%; max-height: 75vh; display: block; margin: 0 auto; border-radius: 8px; }
+  #viewer .cap { margin-top: 10px; white-space: pre-wrap; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .chips button { font-size: 12px; padding: 2px 8px; border-radius: 12px; }
+  .search-results .day { font-size: 13px; font-weight: 600; color: var(--accent); margin: 12px 0 6px; cursor: pointer; }
+  .toolbar { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .hint { font-size: 12px; color: var(--muted); }
+  .carry { background: var(--accent-weak); border-color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap top">
+    <h1>永青前鎮亞灣<small>每日工作待辦 ‧ 照片記錄</small></h1>
+    <div class="datebar">
+      <button class="icon" id="prevDay" title="前一天">◀</button>
+      <input type="date" id="date">
+      <button class="icon" id="nextDay" title="後一天">▶</button>
+      <button id="today">今天</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="card">
+    <form class="add-row" id="addForm">
+      <input type="text" id="newTitle" placeholder="新增待辦事項（例：3F 柱筋查驗、混凝土澆置前檢查）" required>
+      <select id="newPriority" title="優先度">
+        <option value="high">高</option>
+        <option value="mid" selected>中</option>
+        <option value="low">低</option>
+      </select>
+      <button class="primary" type="submit">新增</button>
+    </form>
+  </div>
+
+  <div class="card" id="carryCard" hidden>
+    <span id="carryText"></span>
+    <button id="carryBtn" style="margin-left:8px">帶入今天</button>
+  </div>
+
+  <div class="card">
+    <div class="stats" id="stats"></div>
+    <div class="progress"><div id="bar"></div></div>
+    <div class="filters" id="filters">
+      <button data-f="all" class="on">全部</button>
+      <button data-f="open">未完成</button>
+      <button data-f="done">已完成</button>
+      <button data-f="photo">有照片</button>
+    </div>
+    <div id="list"></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input type="search" id="q" placeholder="搜尋所有日期的待辦／備註／照片說明" style="flex:1;min-width:200px">
+    </div>
+    <div class="search-results" id="results"></div>
+  </div>
+
+  <div class="toolbar">
+    <span class="hint" id="storageInfo" style="margin-right:auto;align-self:center"></span>
+    <button id="exportBtn">匯出備份 (JSON)</button>
+    <button id="importBtn">匯入備份</button>
+    <input type="file" id="importFile" accept="application/json" hidden>
+  </div>
+</main>
+
+<!-- 編輯待辦 -->
+<dialog id="editDlg">
+  <form method="dialog" id="editForm">
+    <h3>編輯待辦</h3>
+    <div class="row"><label>事項</label><input type="text" id="eTitle" style="width:100%" required></div>
+    <div class="row"><label>優先度</label>
+      <select id="ePriority"><option value="high">高</option><option value="mid">中</option><option value="low">低</option></select>
+    </div>
+    <div class="row"><label>備註</label><textarea id="eNote" placeholder="位置、負責人、注意事項…"></textarea></div>
+    <div class="btns"><button value="cancel" formnovalidate>取消</button><button class="primary" value="ok">儲存</button></div>
+  </form>
+</dialog>
+
+<!-- 新增 / 編輯照片說明 -->
+<dialog id="photoDlg">
+  <form method="dialog" id="photoForm">
+    <h3 id="photoDlgTitle">照片用意說明</h3>
+    <img class="preview" id="pPreview" alt="">
+    <div class="row">
+      <label>這張照片要提醒你什麼？</label>
+      <textarea id="pCaption" placeholder="例：B1 東側止水帶接頭需補焊，明天會同監造複查"></textarea>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div class="btns"><button value="cancel" formnovalidate>取消</button><button class="primary" value="ok">儲存</button></div>
+  </form>
+</dialog>
+
+<!-- 看大圖 -->
+<dialog id="viewer">
+  <img id="vImg" alt="">
+  <div class="cap" id="vCap"></div>
+  <div class="btns"><button id="vClose">關閉</button></div>
+</dialog>
+
+<input type="file" id="photoInput" accept="image/*" multiple hidden>
+
+<script>
+'use strict';
+/* ===== IndexedDB 儲存層：todos 與 photos 分開存，照片以 Blob 保存 ===== */
+const DB_NAME = 'yongqing-qianzhen-todo';
+let db;
+function openDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = () => {
+      const d = r.result;
+      const t = d.createObjectStore('todos', { keyPath: 'id' });
+      t.createIndex('date', 'date');
+      const p = d.createObjectStore('photos', { keyPath: 'id' });
+      p.createIndex('todoId', 'todoId');
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+function tx(store, mode, fn) {
+  return new Promise((res, rej) => {
+    const t = db.transaction(store, mode);
+    const out = fn(t.objectStore(store));
+    t.oncomplete = () => res(out && 'result' in out ? out.result : undefined);
+    t.onerror = () => rej(t.error);
+  });
+}
+const put = (s, v) => tx(s, 'readwrite', st => st.put(v));
+const del = (s, k) => tx(s, 'readwrite', st => st.delete(k));
+const getAll = (s) => tx(s, 'readonly', st => st.getAll());
+const byIndex = (s, idx, v) => tx(s, 'readonly', st => st.index(idx).getAll(v));
+
+/* ===== 工具 ===== */
+const $ = s => document.querySelector(s);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const pad = n => String(n).padStart(2, '0');
+const parse = s => new Date(s + 'T00:00:00');
+const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const PRI = { high: '高', mid: '中', low: '低' };
+const PRI_ORDER = { high: 0, mid: 1, low: 2 };
+const urlCache = new Map();
+function blobURL(photo) {
+  if (!urlCache.has(photo.id)) urlCache.set(photo.id, URL.createObjectURL(photo.blob));
+  return urlCache.get(photo.id);
+}
+
+/* 壓縮照片：長邊 1600px、JPEG 0.82，避免手機原圖塞爆瀏覽器空間 */
+function compress(file, max = 1600, q = 0.82) {
+  return new Promise((res) => {
+    const img = new Image();
+    const u = URL.createObjectURL(file);
+    img.onload = () => {
+      const s = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(u);
+      c.toBlob(b => res(b || file), 'image/jpeg', q);
+    };
+    img.onerror = () => { URL.revokeObjectURL(u); res(file); };
+    img.src = u;
+  });
+}
+
+/* ===== 狀態 ===== */
+let curDate = fmt(new Date());
+let filter = 'all';
+let todos = [];
+let photos = new Map(); // todoId -> photo[]
+
+const CHIPS = ['待改善', '缺失追蹤', '查驗紀錄', '需會同監造', '材料進場', '安全衛生', '工程變更', '請廠商處理'];
+
+async function load() {
+  todos = (await byIndex('todos', 'date', curDate))
+    .sort((a, b) => (a.done - b.done) || (PRI_ORDER[a.priority] - PRI_ORDER[b.priority]) || (a.created - b.created));
+  photos = new Map();
+  for (const t of todos) photos.set(t.id, (await byIndex('photos', 'todoId', t.id)).sort((a, b) => a.created - b.created));
+  render();
+  checkCarry();
+  storageInfo();
+}
+
+function render() {
+  $('#date').value = curDate;
+  const total = todos.length, done = todos.filter(t => t.done).length;
+  const nPhoto = [...photos.values()].reduce((a, p) => a + p.length, 0);
+  const noCap = [...photos.values()].flat().filter(p => !p.caption.trim()).length;
+  $('#stats').innerHTML = `<span>總計 <b>${total}</b></span><span>已完成 <b>${done}</b></span>
+    <span>未完成 <b>${total - done}</b></span><span>照片 <b>${nPhoto}</b></span>
+    ${noCap ? `<span style="color:var(--high)">⚠ ${noCap} 張照片尚未填寫用意</span>` : ''}`;
+  $('#bar').style.width = total ? (done / total * 100) + '%' : 0;
+
+  const list = todos.filter(t =>
+    filter === 'all' || (filter === 'open' && !t.done) || (filter === 'done' && t.done) ||
+    (filter === 'photo' && photos.get(t.id)?.length));
+  if (!list.length) {
+    $('#list').innerHTML = `<div class="empty-state">${total ? '此篩選條件下沒有項目' : '這一天還沒有待辦事項'}</div>`;
+    return;
+  }
+  $('#list').innerHTML = list.map(t => {
+    const ps = photos.get(t.id) || [];
+    return `<div class="todo p-${t.priority} ${t.done ? 'done' : ''}" data-id="${t.id}">
+      <div class="todo-head">
+        <input type="checkbox" data-act="toggle" ${t.done ? 'checked' : ''} title="完成">
+        <div class="title">${esc(t.title)}
+          <div class="meta"><span class="tag ${t.priority}">${PRI[t.priority]}</span>${t.doneAt ? '完成於 ' + new Date(t.doneAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
+        </div>
+        <div class="actions">
+          <button class="icon" data-act="photo" title="附加照片">📷</button>
+          <button class="icon" data-act="edit" title="編輯">✏️</button>
+          <button class="icon danger" data-act="delete" title="刪除">🗑</button>
+        </div>
+      </div>
+      ${t.note ? `<div class="note">${esc(t.note)}</div>` : ''}
+      ${ps.length ? `<div class="photos">${ps.map(p => `
+        <div class="photo" data-pid="${p.id}">
+          <img src="${blobURL(p)}" data-act="view" alt="">
+          <div class="cap ${p.caption.trim() ? '' : 'empty'}">${p.caption.trim() ? esc(p.caption) : '尚未說明此照片用意'}</div>
+          <div class="pbtn"><button data-act="pedit">編輯說明</button><button data-act="pdel" class="danger">刪除</button></div>
+        </div>`).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+/* 前一天未完成的事項提示帶入 */
+async function checkCarry() {
+  const d = parse(curDate); d.setDate(d.getDate() - 1);
+  const prev = (await byIndex('todos', 'date', fmt(d))).filter(t => !t.done && !t.carriedTo);
+  const card = $('#carryCard');
+  if (!prev.length) { card.hidden = true; return; }
+  card.hidden = false; card.classList.add('carry');
+  $('#carryText').textContent = `前一天 (${fmt(d)}) 有 ${prev.length} 項未完成。`;
+  $('#carryBtn').onclick = async () => {
+    for (const t of prev) {
+      const nt = { ...t, id: uid(), date: curDate, created: Date.now(), done: false, doneAt: null, carriedTo: null,
+        note: (t.note ? t.note + '\n' : '') + `（延續自 ${t.date}）` };
+      await put('todos', nt);
+      for (const p of await byIndex('photos', 'todoId', t.id)) await put('photos', { ...p, id: uid(), todoId: nt.id });
+      await put('todos', { ...t, carriedTo: curDate });
+    }
+    load();
+  };
+}
+
+async function storageInfo() {
+  if (navigator.storage?.estimate) {
+    const { usage, quota } = await navigator.storage.estimate();
+    $('#storageInfo').textContent = `資料存在本機瀏覽器 ‧ 已用 ${(usage / 1048576).toFixed(1)} MB / 可用約 ${(quota / 1048576 / 1024).toFixed(1)} GB ‧ 請定期匯出備份`;
+  }
+}
+
+/* ===== 事件 ===== */
+$('#addForm').onsubmit = async e => {
+  e.preventDefault();
+  const title = $('#newTitle').value.trim();
+  if (!title) return;
+  await put('todos', { id: uid(), date: curDate, title, priority: $('#newPriority').value, note: '', done: false, doneAt: null, created: Date.now() });
+  $('#newTitle').value = '';
+  load();
+};
+
+function setDate(d) { curDate = d; load(); }
+$('#date').onchange = e => e.target.value && setDate(e.target.value);
+$('#today').onclick = () => setDate(fmt(new Date()));
+$('#prevDay').onclick = () => { const d = parse(curDate); d.setDate(d.getDate() - 1); setDate(fmt(d)); };
+$('#nextDay').onclick = () => { const d = parse(curDate); d.setDate(d.getDate() + 1); setDate(fmt(d)); };
+
+$('#filters').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  filter = b.dataset.f;
+  document.querySelectorAll('#filters button').forEach(x => x.classList.toggle('on', x === b));
+  render();
+};
+
+let photoTarget = null;
+$('#list').addEventListener('click', async e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const id = el.closest('.todo').dataset.id;
+  const t = todos.find(x => x.id === id);
+  const pid = el.closest('.photo')?.dataset.pid;
+  const p = pid && photos.get(id).find(x => x.id === pid);
+  switch (el.dataset.act) {
+    case 'toggle':
+      t.done = el.checked; t.doneAt = t.done ? Date.now() : null;
+      await put('todos', t); load(); break;
+    case 'edit': editTodo(t); break;
+    case 'delete':
+      if (!confirm(`確定刪除「${t.title}」及其照片？`)) return;
+      for (const ph of photos.get(id)) await del('photos', ph.id);
+      await del('todos', id); load(); break;
+    case 'photo': photoTarget = id; $('#photoInput').value = ''; $('#photoInput').click(); break;
+    case 'view':
+      $('#vImg').src = blobURL(p);
+      $('#vCap').textContent = p.caption || '（尚未說明此照片用意）';
+      $('#viewer').showModal(); break;
+    case 'pedit': {
+      const cap = await askCaption(blobURL(p), p.caption, '編輯照片用意');
+      if (cap !== null) { p.caption = cap; await put('photos', p); load(); }
+      break;
+    }
+    case 'pdel':
+      if (!confirm('確定刪除這張照片？')) return;
+      await del('photos', pid); load(); break;
+  }
+});
+
+function editTodo(t) {
+  $('#eTitle').value = t.title; $('#ePriority').value = t.priority; $('#eNote').value = t.note || '';
+  const dlg = $('#editDlg');
+  dlg.onclose = async () => {
+    if (dlg.returnValue !== 'ok') return;
+    t.title = $('#eTitle').value.trim() || t.title; t.priority = $('#ePriority').value; t.note = $('#eNote').value.trim();
+    await put('todos', t); load();
+  };
+  dlg.returnValue = ''; dlg.showModal();
+}
+
+/* 照片說明對話框：回傳文字，取消回傳 null */
+function askCaption(src, initial = '', title = '照片用意說明') {
+  return new Promise(res => {
+    $('#photoDlgTitle').textContent = title;
+    $('#pPreview').src = src; $('#pCaption').value = initial;
+    const dlg = $('#photoDlg');
+    dlg.onclose = () => res(dlg.returnValue === 'ok' ? $('#pCaption').value.trim() : null);
+    dlg.returnValue = ''; dlg.showModal(); $('#pCaption').focus();
+  });
+}
+$('#chips').innerHTML = CHIPS.map(c => `<button type="button">${c}</button>`).join('');
+$('#chips').onclick = e => {
+  if (e.target.tagName !== 'BUTTON') return;
+  const ta = $('#pCaption');
+  ta.value = `【${e.target.textContent}】` + ta.value; ta.focus();
+};
+
+$('#photoInput').onchange = async e => {
+  const files = [...e.target.files]; if (!files.length || !photoTarget) return;
+  for (const f of files) {
+    const blob = await compress(f);
+    const tmp = URL.createObjectURL(blob);
+    const cap = await askCaption(tmp, '', `照片用意說明（${files.indexOf(f) + 1}/${files.length}）`);
+    URL.revokeObjectURL(tmp);
+    if (cap === null) continue; // 取消＝不加入這張
+    await put('photos', { id: uid(), todoId: photoTarget, blob, caption: cap, created: Date.now() });
+  }
+  load();
+};
+
+$('#vClose').onclick = () => $('#viewer').close();
+$('#viewer').onclick = e => { if (e.target.id === 'viewer') $('#viewer').close(); };
+
+/* 搜尋 */
+let qTimer;
+$('#q').oninput = () => { clearTimeout(qTimer); qTimer = setTimeout(search, 200); };
+async function search() {
+  const q = $('#q').value.trim().toLowerCase();
+  if (!q) { $('#results').innerHTML = ''; return; }
+  const [ts, ps] = await Promise.all([getAll('todos'), getAll('photos')]);
+  const capHit = new Set(ps.filter(p => p.caption.toLowerCase().includes(q)).map(p => p.todoId));
+  const hits = ts.filter(t => t.title.toLowerCase().includes(q) || (t.note || '').toLowerCase().includes(q) || capHit.has(t.id))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  if (!hits.length) { $('#results').innerHTML = '<div class="empty-state">找不到符合的項目</div>'; return; }
+  const group = {};
+  hits.forEach(t => (group[t.date] ||= []).push(t));
+  $('#results').innerHTML = Object.entries(group).map(([d, arr]) =>
+    `<div class="day" data-d="${d}">${d} →</div>` +
+    arr.map(t => `<div class="meta">${t.done ? '✅' : '⬜'} ${esc(t.title)}${capHit.has(t.id) ? ' 📷' : ''}</div>`).join('')
+  ).join('');
+}
+$('#results').onclick = e => { const d = e.target.closest('.day')?.dataset.d; if (d) { setDate(d); scrollTo({ top: 0, behavior: 'smooth' }); } };
+
+/* 匯出 / 匯入 */
+const blobToDataURL = b => new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); });
+$('#exportBtn').onclick = async () => {
+  const [ts, ps] = await Promise.all([getAll('todos'), getAll('photos')]);
+  const data = { app: DB_NAME, version: 1, exportedAt: new Date().toISOString(), todos: ts,
+    photos: await Promise.all(ps.map(async p => ({ ...p, blob: await blobToDataURL(p.blob) }))) };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+  a.download = `永青前鎮亞灣_待辦備份_${fmt(new Date())}.json`;
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+$('#importBtn').onclick = () => $('#importFile').click();
+$('#importFile').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    if (!Array.isArray(data.todos) || !Array.isArray(data.photos)) throw new Error('格式不符');
+    if (!confirm(`將匯入 ${data.todos.length} 筆待辦、${data.photos.length} 張照片（相同 ID 會覆蓋），繼續？`)) return;
+    for (const t of data.todos) await put('todos', t);
+    for (const p of data.photos) await put('photos', { ...p, blob: await (await fetch(p.blob)).blob() });
+    alert('匯入完成'); load();
+  } catch (err) { alert('匯入失敗：' + err.message); }
+  e.target.value = '';
+};
+
+/* 啟動 */
+openDB().then(d => {
+  db = d;
+  navigator.storage?.persist?.();
+  load();
+}).catch(err => alert('無法開啟本機資料庫：' + err));
+</script>
+</body>
+</html>
