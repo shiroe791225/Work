@@ -271,7 +271,7 @@ function render() {
   $('#stats').innerHTML = `<span>總計 <b>${total}</b></span><span>已完成 <b>${done}</b></span>
     <span>未完成 <b>${total - done}</b></span><span>照片 <b>${nPhoto}</b></span>
     ${noCap ? `<span style="color:var(--high)">⚠ ${noCap} 張照片尚未填寫用意</span>` : ''}`;
-  $('#bar').style.width = total ? (done / total * 100) + '%' : 0;
+  $('#bar').style.width = total ? (done / total * 100) + '%' : '0%';
 
   const list = todos.filter(t =>
     filter === 'all' || (filter === 'open' && !t.done) || (filter === 'done' && t.done) ||
@@ -459,7 +459,7 @@ $('#exportBtn').onclick = async () => {
     photos: await Promise.all(ps.map(async p => ({ ...p, blob: await blobToDataURL(p.blob) }))) };
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
-  a.download = `永青前鎮亞灣_待辦備份_${fmt(new Date())}.json`;
+  a.download = `yongqing-todo-backup-${fmt(new Date())}.json`;
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 };
 $('#importBtn').onclick = () => $('#importFile').click();
