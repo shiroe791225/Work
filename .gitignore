@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+tests/sample_data*/
+*.xlsx.lock
+lo_check/

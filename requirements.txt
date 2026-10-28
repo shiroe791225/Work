@@ -1,0 +1,5 @@
+openpyxl>=3.1.2
+Pillow>=10.0.0
+
+# 選用：若照片包含 HEIC/HEIF（iPhone 預設格式）才需要，沒有 HEIC 照片可不裝
+pillow-heif>=0.13.0
