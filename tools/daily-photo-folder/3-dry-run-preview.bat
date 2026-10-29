@@ -1,9 +1,9 @@
 @echo off
 REM ============================================================
-REM  DRY RUN: shows what would be created / moved. Changes nothing.
-REM  Run this first if you are unsure.
+REM  DRY RUN - preview only. Nothing is created, nothing is moved.
+REM  Run this FIRST to confirm the behaviour.
 REM ============================================================
 chcp 65001 >nul
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0New-DailyPhotoFolder.ps1" -MovePhotos -WhatIf
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Watch-DailyPhotoFolder.ps1" -RunOnce -WhatIf
 echo.
 pause
