@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f766e">
+  <meta name="description" content="工地現場缺失回報與改善追蹤系統：免登入拍照回報、框選標示、改善回報、驗收與 PDF 報告。">
+  <title>現場回報系統</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+
+<body>
+  <header>
+    <div class="bar">
+      <h1 id="systemName">現場回報系統</h1>
+      <span class="mode-tag" id="modeTag">模式載入中</span>
+    </div>
+    <p id="userInfo">免登入，開啟後即可直接回報</p>
+  </header>
+
+  <main>
+    <div id="message" class="message info hidden" role="status" aria-live="polite"></div>
+
+    <nav class="nav">
+      <button type="button" data-page="createPage">新增回報</button>
+      <button type="button" data-page="improvementPage">改善回報</button>
+      <button type="button" data-page="listPage">回報清單</button>
+    </nav>
+
+    <!-- ===================== 新增回報 ===================== -->
+    <section id="createPage" class="card page">
+      <h2>新增現場回報</h2>
+
+      <form id="reportForm" novalidate>
+        <div class="grid">
+          <div>
+            <label for="reporterName">回報人姓名 *</label>
+            <input id="reporterName" maxlength="50" placeholder="請輸入回報人姓名" autocomplete="name" required>
+          </div>
+
+          <div>
+            <label for="project">專案名稱 *</label>
+            <input id="project" maxlength="100" required>
+          </div>
+
+          <div>
+            <label for="category">回報類型 *</label>
+            <select id="category" required></select>
+          </div>
+
+          <div>
+            <label for="location">現場位置 *</label>
+            <input id="location" maxlength="150" placeholder="例如：A14-01（A棟14樓01戶）" required>
+          </div>
+
+          <div>
+            <label for="owner">改善負責人（依類型自動帶入）</label>
+            <input id="owner" maxlength="100" readonly>
+          </div>
+
+          <div>
+            <label for="dueDate">改善期限（開立日加 <span id="dueDaysText">7</span> 天）</label>
+            <input id="dueDate" type="date" readonly>
+          </div>
+
+          <div>
+            <label for="severity">嚴重程度</label>
+            <select id="severity"></select>
+          </div>
+
+          <div>
+            <label for="vendor">施作廠商（自動帶入，可修改）</label>
+            <input id="vendor" maxlength="100" placeholder="未指定">
+          </div>
+
+          <div class="full">
+            <label for="description">回報內容 *</label>
+            <textarea id="description" maxlength="2000" placeholder="請輸入現場狀況或缺失內容" required></textarea>
+          </div>
+
+          <div class="full">
+            <span class="photo-label">現場照片 *</span>
+
+            <input id="beforeCamera" class="hidden" type="file" accept="image/*" capture="environment">
+            <input id="beforeFile" class="hidden" type="file" accept="image/*">
+
+            <div class="photo-pick">
+              <button type="button" data-click="beforeCamera">拍照</button>
+              <button type="button" class="secondary" data-click="beforeFile">從相簿選擇</button>
+            </div>
+
+            <p id="beforeStatus" class="photo-status">尚未載入照片</p>
+            <canvas id="beforeCanvas" class="hidden"></canvas>
+
+            <div class="photo-tools">
+              <button type="button" class="warning" data-frame="before">新增框選</button>
+              <button type="button" class="secondary" data-delframe="before">刪除選取框</button>
+              <button type="button" class="light" data-undo="before">復原</button>
+              <button type="button" class="light" data-clear="before">清除照片</button>
+            </div>
+
+            <p class="muted">
+              按「新增框選」後，在照片上拖曳畫出範圍（單點一下會產生預設框）。
+              框可拖曳移動，拖曳四角白點可調整大小。送出時會自動在照片右下角加入日期。
+            </p>
+          </div>
+
+          <div class="full">
+            <button id="submitReportButton" type="submit">送出現場回報</button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- ===================== 改善回報 ===================== -->
+    <section id="improvementPage" class="card page hidden">
+      <h2>改善完成回報</h2>
+
+      <form id="improvementForm" novalidate>
+        <div class="grid">
+          <div>
+            <label for="improvementReporterName">改善回報人姓名 *</label>
+            <input id="improvementReporterName" maxlength="50" placeholder="請輸入改善回報人姓名" autocomplete="name" required>
+          </div>
+
+          <div>
+            <label for="improvementReportId">選擇待改善項目 *</label>
+            <select id="improvementReportId" required></select>
+          </div>
+
+          <div class="full">
+            <div id="improvementDetail" class="detail-box hidden"></div>
+          </div>
+
+          <div class="full">
+            <label for="improvementNote">改善說明 *</label>
+            <textarea id="improvementNote" maxlength="2000" placeholder="請說明改善方式及處理結果" required></textarea>
+          </div>
+
+          <div class="full">
+            <span class="photo-label">改善後照片 *</span>
+
+            <input id="afterCamera" class="hidden" type="file" accept="image/*" capture="environment">
+            <input id="afterFile" class="hidden" type="file" accept="image/*">
+
+            <div class="photo-pick">
+              <button type="button" data-click="afterCamera">拍照</button>
+              <button type="button" class="secondary" data-click="afterFile">從相簿選擇</button>
+            </div>
+
+            <p id="afterStatus" class="photo-status">尚未載入照片</p>
+            <canvas id="afterCanvas" class="hidden"></canvas>
+
+            <div class="photo-tools">
+              <button type="button" class="warning" data-frame="after">新增框選</button>
+              <button type="button" class="secondary" data-delframe="after">刪除選取框</button>
+              <button type="button" class="light" data-undo="after">復原</button>
+              <button type="button" class="light" data-clear="after">清除照片</button>
+            </div>
+
+            <p class="muted">按「新增框選」後，在照片上拖曳畫出範圍。框可拖曳移動，拖曳四角白點可調整大小。</p>
+          </div>
+
+          <div class="full">
+            <button id="submitImprovementButton" type="submit">送出改善回報</button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- ===================== 回報清單 ===================== -->
+    <section id="listPage" class="card page hidden">
+      <div class="actions">
+        <h2 style="flex: 1">回報清單</h2>
+        <button type="button" class="secondary" id="refreshButton">重新整理</button>
+      </div>
+
+      <div class="stats" id="stats"></div>
+
+      <div class="filters">
+        <select id="filterStatus">
+          <option value="">全部狀態</option>
+          <option value="待改善">待改善</option>
+          <option value="已改善">已改善</option>
+          <option value="已驗收">已驗收</option>
+        </select>
+        <select id="filterGroup">
+          <option value="">全部類型</option>
+        </select>
+        <input id="filterKeyword" type="search" placeholder="搜尋位置／內容／編號／回報人">
+      </div>
+
+      <div id="reportList">讀取中……</div>
+    </section>
+  </main>
+
+  <footer>
+    <span id="footerInfo">現場回報系統</span>
+  </footer>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
