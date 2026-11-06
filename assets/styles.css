@@ -262,7 +262,45 @@ footer {
   .nav button, .actions button, .photo-tools button, .photo-pick button { flex: 1 1 130px; }
 }
 
-/* ---------- 列印（本機模式的 PDF 用列印輸出） ---------- */
+/* ---------- PDF 匯出版面（畫面外渲染後轉成 PDF） ---------- */
+
+.pdf-sheet {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  width: 760px;
+  padding: 28px;
+  color: #111;
+  background: #fff;
+  font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+  line-height: 1.5;
+}
+
+.pdf-sheet h1 { margin: 0 0 6px; font-size: 24px; text-align: center; letter-spacing: 6px; }
+.pdf-sheet .sub { margin: 0 0 16px; color: #555; font-size: 13px; text-align: center; }
+.pdf-sheet table { width: 100%; border-collapse: collapse; font-size: 14px; }
+
+.pdf-sheet th, .pdf-sheet td {
+  padding: 7px 9px;
+  border: 1px solid #333;
+  text-align: left;
+  vertical-align: top;
+}
+
+.pdf-sheet th { width: 130px; background: #f0f0f0; white-space: nowrap; }
+
+.pdf-sheet .photos { display: flex; gap: 12px; margin-top: 14px; }
+.pdf-sheet .photos figure { flex: 1; margin: 0; text-align: center; }
+.pdf-sheet .photos img { width: 100%; border: 1px solid #333; }
+.pdf-sheet figcaption { margin-top: 4px; font-size: 13px; }
+
+.pdf-sheet .sign { display: flex; gap: 16px; margin-top: 34px; font-size: 14px; }
+.pdf-sheet .sign div { flex: 1; padding-top: 6px; border-top: 1px solid #333; text-align: center; }
+
+.pdf-sheet.list th { width: auto; }
+.pdf-sheet.list th, .pdf-sheet.list td { padding: 5px 6px; font-size: 12px; }
+
+/* ---------- 列印 ---------- */
 
 @media print {
   header, .nav, .filters, footer, .message, button { display: none !important; }

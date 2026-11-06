@@ -56,6 +56,7 @@ function doPost(e) {
       listReports: listReports,
       getPhoto: getPhoto,
       completeImprovement: completeImprovement,
+      acceptReport: acceptReport,
       createPdf: createPdf
     };
 
@@ -369,7 +370,26 @@ function completeImprovement(data) {
   return { reportId: record.reportId };
 }
 
-/* ---------------- 動作：產生 PDF ---------------- */
+/* ---------------- 動作：辦理驗收（不產生 PDF，PDF 由前端下載） ---------------- */
+
+function acceptReport(data) {
+  var acceptorName = requireText(data.acceptorName, '驗收人姓名', 50);
+  var record = findRecord(data.reportId);
+
+  if (!record.improvementNote) {
+    throw new Error('此項目尚未完成改善回報，無法辦理驗收。');
+  }
+
+  updateRecord(record, {
+    acceptedByName: acceptorName,
+    acceptedAt: nowText(),
+    status: SETTINGS.STATUS.ACCEPTED
+  });
+
+  return { reportId: record.reportId };
+}
+
+/* ---------------- 動作：產生 PDF（雲端存檔用） ---------------- */
 
 function createPdf(data) {
   var record = findRecord(data.reportId);

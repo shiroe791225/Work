@@ -173,6 +173,7 @@
       <div class="actions">
         <h2 style="flex: 1">回報清單</h2>
         <button type="button" class="secondary" id="refreshButton">重新整理</button>
+        <button type="button" id="exportListButton">匯出清單 PDF</button>
       </div>
 
       <div class="stats" id="stats"></div>
@@ -198,6 +199,8 @@
     <span id="footerInfo">現場回報系統</span>
   </footer>
 
+  <script src="assets/vendor/html2canvas.min.js"></script>
+  <script src="assets/vendor/jspdf.umd.min.js"></script>
   <script src="assets/config.js"></script>
   <script src="assets/app.js"></script>
 </body>

@@ -133,6 +133,7 @@
     listReports: function () { return RemoteApi.call("listReports", {}); },
     getPhoto: function (reportId, which) { return RemoteApi.call("getPhoto", { reportId: reportId, which: which || "before" }); },
     completeImprovement: function (data) { return RemoteApi.call("completeImprovement", data); },
+    acceptReport: function (data) { return RemoteApi.call("acceptReport", data); },
     createPdf: function (data) { return RemoteApi.call("createPdf", data); }
   };
 
@@ -253,34 +254,59 @@
       return { ok: true };
     },
 
-    createPdf: async function (data) {
+    acceptReport: async function (data) {
       var record = await LocalDb.get("reports", data.reportId);
+
       if (!record) throw new Error("找不到指定的回報資料。");
+      if (!record.improvementNote) throw new Error("此項目尚未完成改善回報，無法辦理驗收。");
 
-      if (data.reportType === "acceptance") {
-        if (!record.improvementNote) throw new Error("此項目尚未完成改善回報，無法產生驗收單。");
+      record.acceptedByName = data.acceptorName;
+      record.acceptedAt = formatDateTime(new Date());
+      record.status = STATUS.ACCEPTED;
 
-        record.acceptedByName = data.acceptorName;
-        record.acceptedAt = formatDateTime(new Date());
-        record.status = STATUS.ACCEPTED;
+      await LocalDb.put("reports", record);
 
-        await LocalDb.put("reports", record);
-      }
+      return { ok: true };
+    },
 
-      var before = await LocalDb.get("photos", data.reportId + ":before");
-      var after = record.hasAfterPhoto ? await LocalDb.get("photos", data.reportId + ":after") : "";
-
-      return { ok: true, printHtml: buildPrintHtml(record, data.reportType, before, after) };
+    createPdf: function () {
+      throw new Error("本機模式的 PDF 由瀏覽器直接產生，不需呼叫後端。");
     }
   };
 
   var Api = USE_REMOTE ? RemoteApi : LocalApi;
 
   /* =======================================================================
-   * 3. 本機模式的列印版報告（可另存為 PDF）
+   * 3. PDF 匯出（前端直接產生檔案，雲端／本機模式皆可用）
+   *    使用內建的 html2canvas + jsPDF，無需連外 CDN
    * ===================================================================== */
 
-  function buildPrintHtml(report, reportType, beforePhoto, afterPhoto) {
+  var PDF_SETTINGS = Object.assign(
+    { FILE_NAME: "{formNumber}_{title}", PAGE_SIZE: "a4", SCALE: 2, LIST_ROWS_PER_PAGE: 16, ARCHIVE_TO_DRIVE: true },
+    CONFIG.PDF || {}
+  );
+
+  function safeFileName(text) {
+    return String(text || "report").replace(/[\\/:*?"<>|\n\r]+/g, "_").slice(0, 120);
+  }
+
+  function buildFileName(report, title) {
+    return safeFileName((PDF_SETTINGS.FILE_NAME || "{formNumber}_{title}")
+      .replace("{formNumber}", report.formNumber || report.reportId || "")
+      .replace("{title}", title)
+      .replace("{project}", report.project || "")
+      .replace("{date}", formatLocalDate(new Date())));
+  }
+
+  function createSheet(extraClass) {
+    var node = document.createElement("div");
+    node.className = "pdf-sheet" + (extraClass ? " " + extraClass : "");
+    return node;
+  }
+
+  /* ---- 單筆：缺失改善報告 / 驗收單 ---- */
+
+  function buildReportNode(report, reportType, beforePhoto, afterPhoto) {
     var isAcceptance = reportType === "acceptance";
     var title = isAcceptance ? "缺失改善驗收單" : "缺失改善報告";
 
@@ -289,47 +315,162 @@
     }
 
     var rows =
-      row("表單編號", report.formNumber) +
+      row("表單編號", report.formNumber || report.reportId) +
       row("專案名稱", report.project) +
       row("回報類型", report.category) +
       row("施作廠商", report.vendor) +
       row("現場位置", report.location) +
       row("嚴重程度", report.severity) +
-      row("改善負責人", report.owner) +
+      row("改善負責單位", report.owner) +
       row("改善期限", report.dueDate) +
       row("缺失內容", report.description) +
-      row("回報人／時間", report.createdByName + "　" + report.createdAt) +
+      row("回報人／時間", (report.createdByName || "") + "　" + (report.createdAt || "")) +
       (report.improvementNote ? row("改善說明", report.improvementNote) : "") +
       (report.improvedByName ? row("改善回報人／時間", report.improvedByName + "　" + report.improvedAt) : "") +
-      (isAcceptance ? row("驗收人／時間", report.acceptedByName + "　" + report.acceptedAt) : "");
+      (isAcceptance ? row("驗收人／時間", (report.acceptedByName || "") + "　" + (report.acceptedAt || "")) : "");
 
-    var photos =
-      '<div class="photos">' +
-      (beforePhoto ? '<figure><img src="' + beforePhoto + '"><figcaption>改善前</figcaption></figure>' : "") +
-      (afterPhoto ? '<figure><img src="' + afterPhoto + '"><figcaption>改善後</figcaption></figure>' : "") +
-      "</div>";
+    var photos = "";
 
-    return '<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8">' +
-      "<title>" + escapeHtml(title + " " + report.formNumber) + "</title><style>" +
-      'body{font-family:"Microsoft JhengHei",sans-serif;color:#111;margin:28px;}' +
-      "h1{font-size:22px;text-align:center;margin:0 0 4px;letter-spacing:4px;}" +
-      ".sub{text-align:center;color:#555;font-size:13px;margin-bottom:18px;}" +
-      "table{width:100%;border-collapse:collapse;font-size:14px;}" +
-      "th,td{border:1px solid #333;padding:7px 9px;vertical-align:top;}" +
-      "th{width:130px;background:#f0f0f0;text-align:left;white-space:nowrap;}" +
-      ".photos{display:flex;gap:12px;margin-top:14px;}" +
-      ".photos figure{flex:1;margin:0;text-align:center;}" +
-      ".photos img{width:100%;border:1px solid #333;}" +
-      "figcaption{font-size:13px;margin-top:4px;}" +
-      ".sign{display:flex;gap:16px;margin-top:28px;font-size:14px;}" +
-      ".sign div{flex:1;border-top:1px solid #333;padding-top:6px;text-align:center;}" +
-      "@media print{body{margin:12mm;}}" +
-      "</style></head><body>" +
+    if (beforePhoto || afterPhoto) {
+      photos = '<div class="photos">' +
+        (beforePhoto ? '<figure><img src="' + beforePhoto + '"><figcaption>改善前</figcaption></figure>' : "") +
+        (afterPhoto ? '<figure><img src="' + afterPhoto + '"><figcaption>改善後</figcaption></figure>' : "") +
+        "</div>";
+    }
+
+    var node = createSheet();
+
+    node.innerHTML =
       "<h1>" + escapeHtml(title) + "</h1>" +
-      '<p class="sub">' + escapeHtml(report.project) + "　列印時間：" + escapeHtml(formatDateTime(new Date())) + "</p>" +
+      '<p class="sub">' + escapeHtml(report.project || "") + "　　列印時間：" + escapeHtml(formatDateTime(new Date())) + "</p>" +
       "<table>" + rows + "</table>" + photos +
-      '<div class="sign"><div>回報人</div><div>改善單位</div><div>監造／驗收</div></div>' +
-      "</body></html>";
+      '<div class="sign"><div>回報人</div><div>改善單位</div><div>監造／驗收</div></div>';
+
+    return node;
+  }
+
+  /* ---- 清單：分頁表格 ---- */
+
+  function buildListNode(rows, pageIndex, pageCount, conditionText) {
+    var node = createSheet("list");
+
+    var body = rows.map(function (report) {
+      return "<tr>" +
+        "<td>" + escapeHtml(report.formNumber || report.reportId) + "</td>" +
+        "<td>" + escapeHtml(report.category) + "</td>" +
+        "<td>" + escapeHtml(report.location) + "</td>" +
+        "<td>" + escapeHtml(report.description) + "</td>" +
+        "<td>" + escapeHtml(report.owner || "－") + "</td>" +
+        "<td>" + escapeHtml(report.dueDate || "－") + "</td>" +
+        "<td>" + escapeHtml(report.status) + (isOverdue(report) ? "（逾期）" : "") + "</td>" +
+        "</tr>";
+    }).join("");
+
+    node.innerHTML =
+      "<h1>現場缺失回報清單</h1>" +
+      '<p class="sub">' + escapeHtml(CONFIG.DEFAULT_PROJECT || "") + "　　" +
+        escapeHtml(conditionText) + "　　列印時間：" + escapeHtml(formatDateTime(new Date())) +
+        "　　第 " + pageIndex + " / " + pageCount + " 頁</p>" +
+      "<table>" +
+        "<tr><th>表單編號</th><th>類型</th><th>位置</th><th>缺失內容</th><th>負責單位</th><th>期限</th><th>狀態</th></tr>" +
+        body +
+      "</table>";
+
+    return node;
+  }
+
+  /* ---- 轉成 PDF 並下載 ---- */
+
+  function waitForImages(node) {
+    var images = Array.prototype.slice.call(node.querySelectorAll("img"));
+
+    return Promise.all(images.map(function (image) {
+      if (image.complete) return Promise.resolve();
+      return new Promise(function (resolve) { image.onload = image.onerror = resolve; });
+    }));
+  }
+
+  async function renderNodesToPdf(nodes, fileName) {
+    var jsPdfCtor = window.jspdf && window.jspdf.jsPDF;
+
+    if (!jsPdfCtor || !window.html2canvas) {
+      throw new Error("PDF 函式庫未載入，請確認 assets/vendor/ 內的檔案存在。");
+    }
+
+    var pdf = new jsPdfCtor({ orientation: "p", unit: "mm", format: PDF_SETTINGS.PAGE_SIZE || "a4" });
+    var margin = 10;
+    var usableWidth = pdf.internal.pageSize.getWidth() - margin * 2;
+    var usableHeight = pdf.internal.pageSize.getHeight() - margin * 2;
+    var started = false;
+
+    function place(canvas) {
+      if (started) pdf.addPage();
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG",
+        margin, margin, usableWidth, canvas.height * usableWidth / canvas.width);
+      started = true;
+    }
+
+    for (var i = 0; i < nodes.length; i++) {
+      await waitForImages(nodes[i]);
+
+      var canvas = await window.html2canvas(nodes[i], {
+        scale: PDF_SETTINGS.SCALE || 2,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        logging: false
+      });
+
+      var heightMm = canvas.height * usableWidth / canvas.width;
+
+      if (heightMm <= usableHeight) {
+        place(canvas);
+        continue;
+      }
+
+      // 超過一頁：依頁高切片
+      var slicePx = Math.floor(canvas.width * usableHeight / usableWidth);
+      var offset = 0;
+
+      while (offset < canvas.height) {
+        var height = Math.min(slicePx, canvas.height - offset);
+        var slice = document.createElement("canvas");
+
+        slice.width = canvas.width;
+        slice.height = height;
+        slice.getContext("2d").drawImage(canvas, 0, offset, canvas.width, height, 0, 0, canvas.width, height);
+
+        place(slice);
+        offset += height;
+      }
+    }
+
+    downloadBlob(pdf.output("blob"), fileName + ".pdf");
+  }
+
+  /* 自行觸發下載，確保檔名正確（含中文） */
+  function downloadBlob(blob, fileName) {
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement("a");
+
+    link.href = url;
+    link.download = fileName;
+    link.style.display = "none";
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+  }
+
+  async function exportNodes(nodes, fileName) {
+    nodes.forEach(function (node) { document.body.appendChild(node); });
+
+    try {
+      await renderNodesToPdf(nodes, fileName);
+    } finally {
+      nodes.forEach(function (node) { node.remove(); });
+    }
   }
 
   /* =======================================================================
@@ -1067,7 +1208,7 @@
       }
 
       var acceptanceButton = report.improvementNote
-        ? '<button type="button" class="secondary" data-pdf-id="' + encodedId + '" data-pdf-type="acceptance">驗收單 PDF</button>'
+        ? '<button type="button" class="secondary" data-pdf-id="' + encodedId + '" data-pdf-type="acceptance">下載驗收單 PDF</button>'
         : "";
 
       return '<article class="report sev-' + escapeHtml(report.severity || "一般") + (overdue ? " overdue" : "") + '">' +
@@ -1092,10 +1233,10 @@
 
         '<div class="actions">' +
           '<button type="button" class="light" data-photo-id="' + encodedId + '">查看照片</button>' +
-          '<button type="button" data-pdf-id="' + encodedId + '" data-pdf-type="improvement">缺失改善報告 PDF</button>' +
+          '<button type="button" data-pdf-id="' + encodedId + '" data-pdf-type="improvement">下載改善報告 PDF</button>' +
           acceptanceButton +
-          link(report.improvementPdfUrl, "下載改善報告") +
-          link(report.acceptancePdfUrl, "下載驗收單") +
+          link(report.improvementPdfUrl, "雲端改善報告") +
+          link(report.acceptancePdfUrl, "雲端驗收單") +
         "</div>" +
         '<div class="photo-view" data-photo-box="' + encodedId + '"></div>' +
       "</article>";
@@ -1103,7 +1244,7 @@
 
     container.querySelectorAll("[data-pdf-id]").forEach(function (button) {
       button.addEventListener("click", function () {
-        createPdf(decodeURIComponent(button.dataset.pdfId), button.dataset.pdfType, button);
+        exportReportPdf(decodeURIComponent(button.dataset.pdfId), button.dataset.pdfType, button);
       });
     });
 
@@ -1225,15 +1366,39 @@
   }
 
   /* =======================================================================
-   * 11. PDF／列印報告
+   * 11. PDF 匯出流程
    * ===================================================================== */
 
-  async function createPdf(reportId, reportType, button) {
+  async function fetchPhotos(report) {
+    var photos = { before: "", after: "" };
+
+    try {
+      if (report.hasBeforePhoto !== false) {
+        photos.before = (await Api.getPhoto(report.reportId, "before")).photo;
+      }
+    } catch (error) { console.warn("改善前照片讀取失敗", error); }
+
+    try {
+      if (report.hasAfterPhoto) {
+        photos.after = (await Api.getPhoto(report.reportId, "after")).photo;
+      }
+    } catch (error) { console.warn("改善後照片讀取失敗", error); }
+
+    return photos;
+  }
+
+  async function exportReportPdf(reportId, reportType, button) {
     var isAcceptance = reportType === "acceptance";
+    var documentName = isAcceptance ? "驗收單" : "缺失改善報告";
     var acceptorName = "";
 
-    // 必須在使用者點擊的當下詢問並開窗，否則會被瀏覽器阻擋
+    var report = reports.find(function (item) { return item.reportId === reportId; });
+    if (!report) { showMessage("找不到指定的回報資料。", "error"); return; }
+
+    // 驗收單必須在點擊當下詢問驗收人
     if (isAcceptance) {
+      if (!report.improvementNote) { showMessage("此項目尚未完成改善回報，無法辦理驗收。", "error"); return; }
+
       var savedName = "";
       try { savedName = localStorage.getItem(ACCEPTOR_KEY) || ""; } catch (e) { /* 忽略 */ }
 
@@ -1241,7 +1406,6 @@
       if (input === null) return;
 
       acceptorName = input.trim();
-
       if (!acceptorName) { showMessage("請輸入驗收人姓名，才能產生驗收單。", "error"); return; }
 
       try { localStorage.setItem(ACCEPTOR_KEY, acceptorName); } catch (e) { /* 忽略 */ }
@@ -1249,35 +1413,87 @@
 
     if (button) button.disabled = true;
 
-    var documentName = isAcceptance ? "驗收單" : "缺失改善報告";
-    var reportWindow = window.open("about:blank", "_blank");
-
     try {
-      showMessage("正在產生" + documentName + "，請稍候……", "info");
+      var archiveUrl = "";
 
-      var result = await Api.createPdf({
-        reporterName: getCurrentReporterName(),
-        reportId: reportId,
-        reportType: reportType,
-        acceptorName: acceptorName
-      });
+      // 1. 記錄狀態（驗收）與雲端存檔
+      if (USE_REMOTE && PDF_SETTINGS.ARCHIVE_TO_DRIVE !== false) {
+        showMessage("正在記錄資料並於雲端存檔，請稍候……", "info");
+
+        var archived = await Api.createPdf({
+          reporterName: getCurrentReporterName(),
+          reportId: reportId,
+          reportType: reportType,
+          acceptorName: acceptorName
+        });
+
+        archiveUrl = archived.url || "";
+      } else if (isAcceptance) {
+        showMessage("正在記錄驗收資料……", "info");
+
+        await Api.acceptReport({
+          reporterName: getCurrentReporterName(),
+          reportId: reportId,
+          acceptorName: acceptorName
+        });
+      }
+
+      // 2. 本機先反映驗收結果，讓 PDF 內容正確
+      if (isAcceptance) {
+        report.acceptedByName = acceptorName;
+        report.acceptedAt = formatDateTime(new Date());
+        report.status = STATUS.ACCEPTED;
+      }
+
+      // 3. 產生並下載 PDF
+      showMessage("正在產生" + documentName + " PDF，請稍候……", "info");
+
+      var photos = await fetchPhotos(report);
+      var node = buildReportNode(report, reportType, photos.before, photos.after);
+
+      await exportNodes([node], buildFileName(report, documentName));
 
       await loadReports(false);
 
-      if (result.url && reportWindow) {
-        reportWindow.location.href = result.url;
-        showMessage(documentName + "已產生。", "success");
-      } else if (result.printHtml && reportWindow) {
-        reportWindow.document.open();
-        reportWindow.document.write(result.printHtml);
-        reportWindow.document.close();
-        showMessage(documentName + "已產生，請在新視窗按「列印／另存為 PDF」。", "success");
-      } else {
-        showMessage(documentName + "已產生，但瀏覽器阻擋了新視窗，請允許彈出視窗後重試。", "error");
-      }
+      showMessage(documentName + " PDF 已下載完成。" +
+        (archiveUrl ? "（雲端亦已存檔）" : ""), "success");
     } catch (error) {
       console.error(error);
-      if (reportWindow && !reportWindow.closed) reportWindow.close();
+      showMessage(getErrorMessage(error), "error");
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  async function exportListPdf(button) {
+    var list = filteredReports();
+
+    if (!list.length) { showMessage("目前沒有可匯出的資料。", "error"); return; }
+
+    if (button) button.disabled = true;
+
+    try {
+      showMessage("正在產生清單 PDF（共 " + list.length + " 筆），請稍候……", "info");
+
+      var perPage = PDF_SETTINGS.LIST_ROWS_PER_PAGE || 16;
+      var condition = [
+        getValue("filterStatus") ? "狀態：" + getValue("filterStatus") : "",
+        getValue("filterGroup") ? "類型：" + getValue("filterGroup") : "",
+        getValue("filterKeyword") ? "關鍵字：" + getValue("filterKeyword") : ""
+      ].filter(Boolean).join("　") || "全部資料";
+
+      var chunks = [];
+      for (var i = 0; i < list.length; i += perPage) chunks.push(list.slice(i, i + perPage));
+
+      var nodes = chunks.map(function (rows, index) {
+        return buildListNode(rows, index + 1, chunks.length, condition);
+      });
+
+      await exportNodes(nodes, safeFileName("現場缺失回報清單_" + formatLocalDate(new Date())));
+
+      showMessage("清單 PDF 已下載完成（" + list.length + " 筆／" + chunks.length + " 頁）。", "success");
+    } catch (error) {
+      console.error(error);
       showMessage(getErrorMessage(error), "error");
     } finally {
       if (button) button.disabled = false;
@@ -1383,6 +1599,8 @@
     $("improvementReportId").addEventListener("change", renderImprovementDetail);
 
     $("refreshButton").addEventListener("click", function () { loadReports(true); });
+
+    $("exportListButton").addEventListener("click", function () { exportListPdf(this); });
 
     ["filterStatus", "filterGroup"].forEach(function (id) {
       $(id).addEventListener("change", renderReports);

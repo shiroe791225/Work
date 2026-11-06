@@ -6,7 +6,7 @@
 window.CONFIG = {
   /* ---- 系統基本資料 ---- */
   SYSTEM_NAME: "現場回報系統",
-  DEFAULT_PROJECT: "亞灣社宅",
+  DEFAULT_PROJECT: "永青前鎮亞灣智慧公宅第一期",
 
   /* ---- 後端 Google Apps Script 網址 ----
    * 留空字串 = 本機示範模式（資料存在這台裝置的瀏覽器，可先測流程）
@@ -45,10 +45,25 @@ window.CONFIG = {
     { group: "土建", label: "土建-曬衣架(高興鳳)",        vendor: "高興鳳" }
   ],
 
-  /* ---- 大分類 → 改善負責單位 ---- */
+  /* ---- 大分類 → 改善負責單位 ----
+   * 目前全案的改善負責單位皆為「永青營造」。
+   * 若日後機電要改由分包單位負責，只需改這一行，例如：
+   *   "機電": "雄菱工程",
+   */
   OWNER_BY_GROUP: {
-    "機電": "雄菱工程",
+    "機電": "永青營造",
     "土建": "永青營造"
+  },
+
+  /* ---- PDF 匯出 ----
+   * 檔名格式可用 {formNumber}、{title}、{project}、{date}
+   */
+  PDF: {
+    FILE_NAME: "{formNumber}_{title}",
+    PAGE_SIZE: "a4",
+    SCALE: 2,                 // 解析度倍率，2 = 清晰可印；調 1 可加快速度
+    LIST_ROWS_PER_PAGE: 16,   // 清單匯出每頁筆數
+    ARCHIVE_TO_DRIVE: true    // 雲端模式時，是否同時在 Google Drive 保存一份
   },
 
   /* ---- 狀態字樣（請勿隨意更動，後端共用） ---- */
